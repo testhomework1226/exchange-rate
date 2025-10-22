@@ -27,43 +27,43 @@
 
   <script>
     async function loadRates() {
-      const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-xxxx/pub?output=csv'; // ← 改成你的試算表網址
+      const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-XXXXXXX/pub?output=csv'; // ← 改成你的連結
 
       Papa.parse(url, {
         download: true,
         header: true,
         complete: function(results) {
-          const rows = results.data;
+          const rows = results.data.filter(r => Object.keys(r).length > 1); // 避免空行
           if (rows.length === 0) {
             document.getElementById('time').innerText = '❌ 無資料';
             return;
           }
 
-          // 取最新一列（最後一筆）
           const latest = rows[rows.length - 1];
-
-          // 顯示更新日期
           const date = latest['Date'] || latest['日期'] || '未知';
           document.getElementById('time').innerText = `更新時間：${date} 上午 9:00～10:00`;
 
-          // 顯示部分幣別
           const wanted = ['USD/NTD', 'RMB/NTD', 'EUR/USD', 'GBP/USD', 'AUD/USD', 'USD/JPY'];
           const tbody = document.querySelector('#ratesTable tbody');
           tbody.innerHTML = '';
 
           wanted.forEach(code => {
-            const rate = latest[code];
-            if (rate) {
-              tbody.innerHTML += `<tr><td>${code}</td><td>${rate}</td></tr>`;
-            }
+            const rate = latest[code] || latest[code.replace('/', '')];
+            if (rate) tbody.innerHTML += `<tr><td>${code}</td><td>${rate}</td></tr>`;
           });
         },
         error: function(err) {
           document.getElementById('time').innerText = '❌ 無法載入資料';
-          console.error(err);
+          console.error('錯誤：', err);
         }
       });
     }
+
+    loadRates();
+  </script>
+</body>
+</html>
+
 
     loadRates();
   </script>
