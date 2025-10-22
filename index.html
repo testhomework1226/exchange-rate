@@ -51,10 +51,8 @@
         const res = await fetch(url);
         const data = await res.json();
 
-        // 🕒 正確處理時間字串
+        // 🕒 解析時間字串
         const utcString = data.time_last_update_utc; // 例如 "Wed, 23 Oct 2024 00:05:01 +0000"
-
-        // 把 "+0000" 改成 "Z"，讓 Date() 能解析
         const cleanUTC = utcString.replace('+0000', 'Z');
         const date = new Date(cleanUTC);
 
@@ -64,18 +62,27 @@
           return;
         }
 
-        // 轉成台灣時間
+        // 轉成台灣時間 (+8)
         const taiwanTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
 
         const year = taiwanTime.getFullYear();
         const month = String(taiwanTime.getMonth() + 1).padStart(2, '0');
         const day = String(taiwanTime.getDate()).padStart(2, '0');
+        let hour = taiwanTime.getHours();
 
-        // 固定顯示上午 9:00～10:00
-        const formatted = `${year}/${month}/${day} 上午 9:00～10:00`;
+        // 判斷上午/下午
+        const isAM = hour < 12;
+        const period = isAM ? '上午' : '下午';
+
+        // 轉為 12 小時制
+        const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+        const nextHour = (displayHour % 12) + 1;
+        const nextPeriod = (displayHour === 11) ? (isAM ? '下午' : '上午') : period;
+
+        const formatted = `${year}/${month}/${day} ${period} ${displayHour}:00～${nextPeriod} ${nextHour}:00`;
         document.getElementById('time').innerText = '更新時間：' + formatted;
 
-        // 顯示幣別
+        // 顯示匯率表
         const wanted = ['TWD', 'JPY', 'EUR', 'GBP', 'AUD', 'CNY'];
         const tbody = document.querySelector('#ratesTable tbody');
         tbody.innerHTML = '';
