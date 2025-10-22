@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💱 即時匯率看板</title>
+  <title>即時匯率看板</title>
   <style>
     body {
-      font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+      font-family: "Segoe UI", sans-serif;
       background: #f2f5f9;
       margin: 0;
       padding: 20px;
@@ -29,16 +29,11 @@
       background: #0078d7;
       color: white;
     }
-    #time {
-      color: #666;
-      font-size: 14px;
-    }
   </style>
 </head>
 <body>
   <h1>💱 即時匯率看板</h1>
   <p id="time">載入中...</p>
-
   <table id="ratesTable">
     <thead>
       <tr>
@@ -51,40 +46,6 @@
 
   <script>
     async function loadRates() {
-      try {
-        // 🔗 換成你的 Google 試算表 CSV 連結（確保是「任何人都可檢視」）
-        const url = 'https://docs.google.com/spreadsheets/d/1dmUzpQu2uHLzqC4YEnFNC0zZb1AnewDofq07wdOyAvA/gviz/tq?tqx=out:csv&gid=1579647566';
-        
-        const res = await fetch(url);
-        const text = await res.text();
-
-        // 解析 CSV，每行用逗號分隔
-        const rows = text.trim().split('\n').map(r => r.split(','));
-
-        // 顯示更新時間（第1列第2欄 = B1）
-        const updateTime = rows[0][1] || '未知時間';
-        document.getElementById('time').innerText = '更新時間：' + updateTime;
-
-        // 清空表格
-        const tbody = document.querySelector('#ratesTable tbody');
-        tbody.innerHTML = '';
-
-        // 從第4行開始讀（假設第1~3行是說明文字）
-        for (let i = 4; i < rows.length; i++) {
-          const [currency, rate] = rows[i];
-          if (!currency || !rate) continue;
-          const rowHTML = `<tr><td>${currency}</td><td>${rate}</td></tr>`;
-          tbody.innerHTML += rowHTML;
-        }
-
-      } catch (err) {
-        document.getElementById('time').innerText = '❌ 無法取得資料，請稍後再試';
-        console.error('讀取錯誤：', err);
-      }
-    }
-
-    loadRates();
-  </script>
-</body>
-</html>
-
+      const url = 'https://api.exchangerate-api.com/v4/latest/USD';
+      const res = await fetch(url);
+      const data = await res.json();
