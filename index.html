@@ -6,10 +6,26 @@
   <title>每日匯率看板</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    body { font-family: "Segoe UI", sans-serif; background: #f4f6fa; text-align: center; padding: 20px; }
-    table { margin: 20px auto; border-collapse: collapse; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    th, td { padding: 10px 20px; border: 1px solid #ddd; }
-    th { background: #0078d7; color: white; }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f4f6fa;
+      text-align: center;
+      padding: 20px;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px 20px;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #0078d7;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -18,8 +34,8 @@
   <table id="ratesTable">
     <thead>
       <tr>
-        <th>貨幣</th>
-        <th>匯率</th>
+        <th>貨幣代碼</th>
+        <th>匯率（對 USD）</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -27,34 +43,36 @@
 
   <script>
     async function loadRates() {
-      const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-XXXXXXX/pub?output=csv'; // ← 改成你的連結
+      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTqfLntLKS4FqhDi3rHUw_W47UAqDPFb8womXnmKfi3Nhzq1hL56Wmx7F1EoS4m_aHwZ9GBW0LVOgUG/pub?output=csv";
 
       Papa.parse(url, {
         download: true,
-        header: true,
         complete: function(results) {
-          const rows = results.data.filter(r => Object.keys(r).length > 1); // 避免空行
-          if (rows.length === 0) {
-            document.getElementById('time').innerText = '❌ 無資料';
+          const data = results.data;
+          if (data.length < 5) {
+            document.getElementById('time').innerText = '❌ 無法載入資料';
             return;
           }
 
-          const latest = rows[rows.length - 1];
-          const date = latest['Date'] || latest['日期'] || '未知';
-          document.getElementById('time').innerText = `更新時間：${date} 上午 9:00～10:00`;
+          // 取得時間
+          const updateTime = data[0][1]; // A1 時間
+          document.getElementById('time').innerText = `更新時間：${updateTime}（每日早上 9:00～10:00）`;
 
-          const wanted = ['USD/NTD', 'RMB/NTD', 'EUR/USD', 'GBP/USD', 'AUD/USD', 'USD/JPY'];
           const tbody = document.querySelector('#ratesTable tbody');
           tbody.innerHTML = '';
 
-          wanted.forEach(code => {
-            const rate = latest[code] || latest[code.replace('/', '')];
-            if (rate) tbody.innerHTML += `<tr><td>${code}</td><td>${rate}</td></tr>`;
-          });
+          // 從第 5 列開始是資料
+          for (let i = 4; i < data.length; i++) {
+            const code = data[i][0];
+            const rate = data[i][1];
+            if (code && rate) {
+              tbody.innerHTML += `<tr><td>${code}</td><td>${rate}</td></tr>`;
+            }
+          }
         },
         error: function(err) {
           document.getElementById('time').innerText = '❌ 無法載入資料';
-          console.error('錯誤：', err);
+          console.error(err);
         }
       });
     }
@@ -63,10 +81,3 @@
   </script>
 </body>
 </html>
-
-
-    loadRates();
-  </script>
-</body>
-</html>
-
