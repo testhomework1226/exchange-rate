@@ -1,53 +1,72 @@
-function fetchRatesToSheet() {
-  const url = "https://open.er-api.com/v6/latest/USD";  // 匯率 API
-  const response = UrlFetchApp.fetch(url);
-  const text = response.getContentText();
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>即時匯率看板</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f2f5f9;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px 20px;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #0078d7;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>💱 即時匯率看板</h1>
+  <p id="time">載入中...</p>
+  <table id="ratesTable">
+    <thead>
+      <tr>
+        <th>貨幣</th>
+        <th>匯率（對 USD）</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  Logger.log("📦 API 回傳內容前100字: " + text.substring(0, 100));
+  <script>
+    async function loadRates() {
+      const url = 'https://api.exchangerate-api.com/v4/latest/USD';
+      const res = await fetch(url);
+      const data = await res.json();
 
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
-    Logger.log("⚠️ JSON 解析錯誤：" + e);
-    return;
-  }
+      document.getElementById('time').innerText =
+        '更新時間：' + new Date(data.time_last_update_utc).toLocaleString('zh-TW');
 
-  if (!data || !data.rates) {
-    Logger.log("⚠️ 找不到 data.rates！");
-    return;
-  }
+      const wanted = ['TWD', 'JPY', 'EUR', 'GBP', 'AUD', 'CNY'];
+      const tbody = document.querySelector('#ratesTable tbody');
+      tbody.innerHTML = '';
 
-  const sheetName = "匯率資料";
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(sheetName);
-  if (!sheet) sheet = ss.insertSheet(sheetName);
-  sheet.clear();
+      wanted.forEach(code => {
+        const rate = data.rates[code];
+        if (rate) {
+          const row = `<tr><td>${code}</td><td>${rate}</td></tr>`;
+          tbody.innerHTML += row;
+        }
+      });
+    }
 
-  const rates = data.rates;
-  const rows = [];
-
-  for (const [currency, rate] of Object.entries(rates)) {
-    if (currency && rate) rows.push([currency, rate]);
-  }
-
-  if (rows.length === 0) {
-    Logger.log("⚠️ 沒有匯率資料可寫入。");
-    return;
-  }
-
-  // 取得目前時間
-  const now = new Date();
-  const formattedTime = Utilities.formatDate(now, "Asia/Taipei", "yyyy/MM/dd HH:mm:ss");
-
-  // 寫入標題與資料
-  sheet.getRange(1, 1, 1, 2).setValues([["📅 最後更新時間", formattedTime]]);
-  sheet.getRange(2, 1, 1, 2).setValues([["基準貨幣", data.base_code]]);
-  sheet.getRange(4, 1, 1, 2).setValues([["貨幣代碼", "匯率"]]);
-  sheet.getRange(5, 1, rows.length, 2).setValues(rows);
-
-  // 調整欄寬
-  sheet.autoResizeColumns(1, 2);
-
-  Logger.log("✅ 匯率資料更新完成，共 " + rows.length + " 筆。");
-}
+    loadRates();
+  </script>
+</body>
+</html>
