@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>即時匯率看板</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f2f5f9;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px 20px;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #0078d7;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>💱 即時匯率看板</h1>
+  <p id="time">載入中...</p>
+  <table id="ratesTable">
+    <thead>
+      <tr>
+        <th>貨幣</th>
+        <th>匯率（對 USD）</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function loadRates() {
+      const url = 'https://api.exchangerate-api.com/v4/latest/USD';
+      const res = await fetch(url);
+      const data = await res.json();
+
+      document.getElementById('time').innerText =
+        '更新時間：' + new Date(data.time_last_update_utc).toLocaleString('zh-TW');
+
+      const wanted = ['TWD', 'JPY', 'EUR', 'GBP', 'AUD', 'CNY'];
+      const tbody = document.querySelector('#ratesTable tbody');
+      tbody.innerHTML = '';
+
+      wanted.forEach(code => {
+        const rate = data.rates[code];
+        if (rate) {
+          const row = `<tr><td>${code}</td><td>${rate}</td></tr>`;
+          tbody.innerHTML += row;
+        }
+      });
+    }
+
+    loadRates();
+  </script>
+</body>
+</html>
