@@ -3,42 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>即時匯率看板</title>
+  <title>每日匯率看板</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f2f5f9;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    h1 {
-      color: #333;
-    }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 10px 20px;
-      border: 1px solid #ddd;
-    }
-    th {
-      background: #0078d7;
-      color: white;
-    }
+    body { font-family: "Segoe UI", sans-serif; background: #f4f6fa; text-align: center; padding: 20px; }
+    table { margin: 20px auto; border-collapse: collapse; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    th, td { padding: 10px 20px; border: 1px solid #ddd; }
+    th { background: #0078d7; color: white; }
   </style>
 </head>
 <body>
-  <h1>💱 即時匯率看板</h1>
-  <p id="time">載入中...</p>
+  <h1>💱 每日匯率看板</h1>
+  <p id="time">更新時間：載入中...</p>
   <table id="ratesTable">
     <thead>
       <tr>
         <th>貨幣</th>
-        <th>匯率（對 USD）</th>
+        <th>匯率</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -46,61 +27,46 @@
 
   <script>
     async function loadRates() {
-      try {
-        const url = 'https://api.exchangerate-api.com/v4/latest/USD';
-        const res = await fetch(url);
-        const data = await res.json();
+      const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-xxxx/pub?output=csv'; // ← 改成你的試算表網址
 
-        // 🕒 解析時間字串
-        const utcString = data.time_last_update_utc; // 例如 "Wed, 23 Oct 2024 00:05:01 +0000"
-        const cleanUTC = utcString.replace('+0000', 'Z');
-        const date = new Date(cleanUTC);
-
-        if (isNaN(date.getTime())) {
-          document.getElementById('time').innerText = '❌ 時間解析失敗 (' + utcString + ')';
-          console.error('時間格式錯誤：', utcString);
-          return;
-        }
-
-        // 轉成台灣時間 (+8)
-        const taiwanTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-
-        const year = taiwanTime.getFullYear();
-        const month = String(taiwanTime.getMonth() + 1).padStart(2, '0');
-        const day = String(taiwanTime.getDate()).padStart(2, '0');
-        let hour = taiwanTime.getHours();
-
-        // 判斷上午/下午
-        const isAM = hour < 12;
-        const period = isAM ? '上午' : '下午';
-
-        // 轉為 12 小時制
-        const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-        const nextHour = (displayHour % 12) + 1;
-        const nextPeriod = (displayHour === 11) ? (isAM ? '下午' : '上午') : period;
-
-        const formatted = `${year}/${month}/${day} ${period} ${displayHour}:00～${nextPeriod} ${nextHour}:00`;
-        document.getElementById('time').innerText = '更新時間：' + formatted;
-
-        // 顯示匯率表
-        const wanted = ['TWD', 'JPY', 'EUR', 'GBP', 'AUD', 'CNY'];
-        const tbody = document.querySelector('#ratesTable tbody');
-        tbody.innerHTML = '';
-
-        wanted.forEach(code => {
-          const rate = data.rates[code];
-          if (rate) {
-            const row = `<tr><td>${code}</td><td>${rate}</td></tr>`;
-            tbody.innerHTML += row;
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          const rows = results.data;
+          if (rows.length === 0) {
+            document.getElementById('time').innerText = '❌ 無資料';
+            return;
           }
-        });
-      } catch (error) {
-        document.getElementById('time').innerText = '❌ 抓取資料失敗';
-        console.error('抓取錯誤：', error);
-      }
+
+          // 取最新一列（最後一筆）
+          const latest = rows[rows.length - 1];
+
+          // 顯示更新日期
+          const date = latest['Date'] || latest['日期'] || '未知';
+          document.getElementById('time').innerText = `更新時間：${date} 上午 9:00～10:00`;
+
+          // 顯示部分幣別
+          const wanted = ['USD/NTD', 'RMB/NTD', 'EUR/USD', 'GBP/USD', 'AUD/USD', 'USD/JPY'];
+          const tbody = document.querySelector('#ratesTable tbody');
+          tbody.innerHTML = '';
+
+          wanted.forEach(code => {
+            const rate = latest[code];
+            if (rate) {
+              tbody.innerHTML += `<tr><td>${code}</td><td>${rate}</td></tr>`;
+            }
+          });
+        },
+        error: function(err) {
+          document.getElementById('time').innerText = '❌ 無法載入資料';
+          console.error(err);
+        }
+      });
     }
 
     loadRates();
   </script>
 </body>
 </html>
+
