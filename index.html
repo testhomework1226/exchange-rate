@@ -51,7 +51,8 @@
       const data = await res.json();
 
       document.getElementById('time').innerText =
-        '更新時間：' + new Date(data.time_last_update_utc).toLocaleString('zh-TW');
+  '更新時間：' + data[0][1];
+
 
       const wanted = ['TWD', 'JPY', 'EUR', 'GBP', 'AUD', 'CNY'];
       const tbody = document.querySelector('#ratesTable tbody');
