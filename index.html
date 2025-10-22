@@ -51,27 +51,31 @@
         const res = await fetch(url);
         const data = await res.json();
 
-        // 🕒 這裡是關鍵：用 time_last_update_utc，轉成 JS Date
-        const dateStr = data.time_last_update_utc; // e.g. "Tue, 22 Oct 2024 00:05:01 +0000"
-        const date = new Date(dateStr);
+        // 🕒 正確處理時間字串
+        const utcString = data.time_last_update_utc; // 例如 "Wed, 23 Oct 2024 00:05:01 +0000"
 
-        // 防呆：如果轉換失敗，跳出警告
+        // 把 "+0000" 改成 "Z"，讓 Date() 能解析
+        const cleanUTC = utcString.replace('+0000', 'Z');
+        const date = new Date(cleanUTC);
+
         if (isNaN(date.getTime())) {
-          document.getElementById('time').innerText = '❌ 時間解析失敗';
-          console.error('時間格式錯誤：', dateStr);
+          document.getElementById('time').innerText = '❌ 時間解析失敗 (' + utcString + ')';
+          console.error('時間格式錯誤：', utcString);
           return;
         }
 
-        // 格式化年月日
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+        // 轉成台灣時間
+        const taiwanTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
 
-        // ✅ 固定顯示上午 9:00～10:00
+        const year = taiwanTime.getFullYear();
+        const month = String(taiwanTime.getMonth() + 1).padStart(2, '0');
+        const day = String(taiwanTime.getDate()).padStart(2, '0');
+
+        // 固定顯示上午 9:00～10:00
         const formatted = `${year}/${month}/${day} 上午 9:00～10:00`;
         document.getElementById('time').innerText = '更新時間：' + formatted;
 
-        // 顯示想要的幣別
+        // 顯示幣別
         const wanted = ['TWD', 'JPY', 'EUR', 'GBP', 'AUD', 'CNY'];
         const tbody = document.querySelector('#ratesTable tbody');
         tbody.innerHTML = '';
