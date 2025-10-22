@@ -1,83 +1,46 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每日匯率看板</title>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f4f6fa;
-      text-align: center;
-      padding: 20px;
-    }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 10px 20px;
-      border: 1px solid #ddd;
-    }
-    th {
-      background: #0078d7;
-      color: white;
-    }
-  </style>
-</head>
-<body>
-  <h1>💱 每日匯率看板</h1>
-  <p id="time">更新時間：載入中...</p>
-  <table id="ratesTable">
-    <thead>
-      <tr>
-        <th>貨幣代碼</th>
-        <th>匯率（對 USD）</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+function fetchRatesToSheet() {
+  const url = "https://open.er-api.com/v6/latest/USD";  // 匯率 API
+  const response = UrlFetchApp.fetch(url);
+  const text = response.getContentText();
 
-  <script>
-    async function loadRates() {
-      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTqfLntLKS4FqhDi3rHUw_W47UAqDPFb8womXnmKfi3Nhzq1hL56Wmx7F1EoS4m_aHwZ9GBW0LVOgUG/pub?output=csv";
+  Logger.log("📦 API 回傳內容前100字: " + text.substring(0, 100));
 
-      Papa.parse(url, {
-        download: true,
-        complete: function(results) {
-          const data = results.data;
-          if (data.length < 5) {
-            document.getElementById('time').innerText = '❌ 無法載入資料';
-            return;
-          }
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    Logger.log("⚠️ JSON 解析錯誤：" + e);
+    return;
+  }
 
-          // 取得時間
-          const updateTime = data[0][1]; // A1 時間
-          document.getElementById('time').innerText = `更新時間：${updateTime}（每日早上 9:00～10:00）`;
+  if (!data || !data.rates) {
+    Logger.log("⚠️ 找不到 data.rates！");
+    return;
+  }
 
-          const tbody = document.querySelector('#ratesTable tbody');
-          tbody.innerHTML = '';
+  const sheetName = "匯率資料";
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) sheet = ss.insertSheet(sheetName);
+  sheet.clear();
 
-          // 從第 5 列開始是資料
-          for (let i = 4; i < data.length; i++) {
-            const code = data[i][0];
-            const rate = data[i][1];
-            if (code && rate) {
-              tbody.innerHTML += `<tr><td>${code}</td><td>${rate}</td></tr>`;
-            }
-          }
-        },
-        error: function(err) {
-          document.getElementById('time').innerText = '❌ 無法載入資料';
-          console.error(err);
-        }
-      });
-    }
+  const rates = data.rates;
+  const rows = [];
 
-    loadRates();
-  </script>
-</body>
-</html>
+  for (const [currency, rate] of Object.entries(rates)) {
+    if (currency && rate) rows.push([currency, rate]);
+  }
+
+  if (rows.length === 0) {
+    Logger.log("⚠️ 沒有匯率資料可寫入。");
+    return;
+  }
+
+  // 一次性寫入資料
+  sheet.getRange(1, 1, 1, 2).setValues([["日期", new Date()]]);
+  sheet.getRange(2, 1, 1, 2).setValues([["基準貨幣", data.base_code]]);
+  sheet.getRange(4, 1, 1, 2).setValues([["貨幣代碼", "匯率"]]);
+  sheet.getRange(5, 1, rows.length, 2).setValues(rows);
+
+  Logger.log("✅ 匯率資料更新完成，共 " + rows.length + " 筆。");
+}
