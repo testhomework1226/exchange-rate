@@ -51,10 +51,18 @@
         const res = await fetch(url);
         const data = await res.json();
 
-        // 有些 API 用 UNIX timestamp，所以用這個最穩
-        const timestamp = data.time_last_update_unix * 1000;
-        const date = new Date(timestamp);
+        // 🕒 這裡是關鍵：用 time_last_update_utc，轉成 JS Date
+        const dateStr = data.time_last_update_utc; // e.g. "Tue, 22 Oct 2024 00:05:01 +0000"
+        const date = new Date(dateStr);
 
+        // 防呆：如果轉換失敗，跳出警告
+        if (isNaN(date.getTime())) {
+          document.getElementById('time').innerText = '❌ 時間解析失敗';
+          console.error('時間格式錯誤：', dateStr);
+          return;
+        }
+
+        // 格式化年月日
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -63,6 +71,7 @@
         const formatted = `${year}/${month}/${day} 上午 9:00～10:00`;
         document.getElementById('time').innerText = '更新時間：' + formatted;
 
+        // 顯示想要的幣別
         const wanted = ['TWD', 'JPY', 'EUR', 'GBP', 'AUD', 'CNY'];
         const tbody = document.querySelector('#ratesTable tbody');
         tbody.innerHTML = '';
@@ -84,5 +93,3 @@
   </script>
 </body>
 </html>
-
-
